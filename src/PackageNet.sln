@@ -37,7 +37,30 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".nuget", ".nuget", "{B17F61
 		.nuget\NuGet.targets = .nuget\NuGet.targets
 	EndProjectSection
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ExampleWeb", "projects\ExampleWeb\ExampleWeb.csproj", "{B95F7628-C14B-4BF5-BDEB-A50831DD45EF}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ExampleConsole", "projects\ExampleConsole\ExampleConsole.csproj", "{857ED073-E4D2-4ED3-B92C-61AA6128947A}"
+EndProject
 Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Dev|Any CPU = Dev|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{B95F7628-C14B-4BF5-BDEB-A50831DD45EF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B95F7628-C14B-4BF5-BDEB-A50831DD45EF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B95F7628-C14B-4BF5-BDEB-A50831DD45EF}.Dev|Any CPU.ActiveCfg = Dev|Any CPU
+		{B95F7628-C14B-4BF5-BDEB-A50831DD45EF}.Dev|Any CPU.Build.0 = Dev|Any CPU
+		{B95F7628-C14B-4BF5-BDEB-A50831DD45EF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B95F7628-C14B-4BF5-BDEB-A50831DD45EF}.Release|Any CPU.Build.0 = Release|Any CPU
+		{857ED073-E4D2-4ED3-B92C-61AA6128947A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{857ED073-E4D2-4ED3-B92C-61AA6128947A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{857ED073-E4D2-4ED3-B92C-61AA6128947A}.Dev|Any CPU.ActiveCfg = Dev|Any CPU
+		{857ED073-E4D2-4ED3-B92C-61AA6128947A}.Dev|Any CPU.Build.0 = Dev|Any CPU
+		{857ED073-E4D2-4ED3-B92C-61AA6128947A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{857ED073-E4D2-4ED3-B92C-61AA6128947A}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
