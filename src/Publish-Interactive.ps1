@@ -1,8 +1,7 @@
 [CmdletBinding(SupportsShouldProcess=$true)]
-# note: Adding more parameters may impact how the script behaves wrt the NonInteractive mode
 param([switch]$NonInteractive,[string]$publishConfigExpectedFilename = "PublishConfiguration.ps1", [string]$userArgs)
 
-if($PSCmdlet.ShouldProcess($env:COMPUTERNAME,'verbose-msg')){ }
+if($PSCmdlet.ShouldProcess($env:COMPUTERNAME,'verbose-msg')){}
 
 ### START MODULE SECTION ####
 function Get-ScriptDirectory
@@ -21,6 +20,7 @@ $paramNameUsername = "Username"
 $paramNamePassword = "Password"
 $paramNameAllowUntrusted = "Allow untrusted certificate"
 $paramNameDoNotDelete = "MSDeployDoNotDelete"
+$paramNameDestinationFolder = "DestinationFolder"
 # $publishConfigExpectedFilename = "PublishConfiguration.ps1"
 $publishConfigReadmeFilename = ("{0}.readme" -f $publishConfigExpectedFilename)
 
@@ -202,6 +202,8 @@ function ExecuteNonWebConfigTransforms(){
         $deployTransformFilesFolder = (Join-Path $deployTransformFolder -ChildPath 'transformFiles\')
         $deployTransformSrcFilesFolder = (Join-Path $deployTransformFolder -ChildPath 'src\')
 
+		
+		
         $originalLocation = Get-Location
         if(Test-Path $deployTransformFolder){
             # required for computing relative paths to the temp folder
@@ -210,6 +212,7 @@ function ExecuteNonWebConfigTransforms(){
     }
     process {      
         if(!($transformsToExecute)){
+			"No Transforms found" | Write-Verbose | Out-Null
             return
         }
         if(!(Test-Path $deployTransformFolder)){
@@ -505,12 +508,13 @@ function PromptUserForParameterValues {
     $e = Write-Host "********************************************************************************" -ForegroundColor yellow
 
     if(!($publishParameters)) { $publishParameters = @() }
-    
+    Write-Host "We have published parameters."
 	$publishParameters += @{name="Computer name";defaultValue="localhost";isInternalParameter=$true}
     $publishParameters += @{name="Username";defaultValue="";isInternalParameter=$true}
     $publishParameters += @{name="Password";defaultValue="";isInternalParameter=$true;isSecure=$true}
     $publishParameters += @{name=("{0}" -f $paramNameAllowUntrusted);defaultValue="false";isInternalParameter=$true}
     $publishParameters += @{name="whatif";defaultValue="false";isInternalParameter=$true}
+	$publishParameters += @{name=$paramNameDestinationFolder;defaultValue="";isInternalParameter=$true}
     $publishParameters += @{name=$paramNameDoNotDelete;defaultValue='true';isInternalParameter=$true;promptForInput=$false}
 	$publishParameters += @{name=$paramNameAuthType;defaultValue="basic";isInternalParameter=$true;promptForInput=$false}
     # $publishParameters += $paramsFromUser
@@ -680,11 +684,28 @@ function BuildMSDeployCommand {
     $doNotDeleteParam = FindParamByName -allParams $paramValues -name $paramNameDoNotDelete
     if($doNotDeleteParam -and $doNotDeleteParam.Value -and $doNotDeleteParam.Value.Length -gt 0){        
         $doNotDelete = [System.Convert]::ToBoolean($doNotDeleteParam.Value)
-    }
-
+    }	
+	
+	if(!($isWebsite)) {
+		$deployfolder = (join-path -path $deployfolder -ChildPath '\Content\website\bin')
+	}
+	
+	$source = "archiveDir"
+	$dest = "auto"
+	
+	if(!($isWebsite)) {
+		$source = "contentPath"
+		
+		$destinationfolder = FindParamByName -allParams $paramValues -name $paramNameDestinationFolder		
+		$dest = "contentPath=""{0}""" -f $destinationfolder.Value			
+	}	
+	
     $msdExe = GetPathToMSDeploy
-    $msdCommand = """{0}"" -verb:sync -source:archiveDir=""{1}"" -dest:auto,includeAcls='False'{2}{3}{4}{5} -disableLink:AppPoolExtension -disableLink:ContentExtension -disableLink:CertificateExtension" -f $msdExe,$deployFolder,$compNameCommandFrag,$usernameCommandFrag,$passwordCommandFrag,$authTypeCommandFrag
-    $msdCommand = "{0} -setParamFile:""{1}"" {2}" -f $msdCommand, $setParametersFilePath, $whatIfCommandFrag
+		
+    $msdCommand = """{0}"" -verb:sync -source:{1}=""{2}"" -dest:{3},includeAcls='False'{4}{5}{6}{7} -disableLink:AppPoolExtension -disableLink:ContentExtension -disableLink:CertificateExtension" -f $msdExe,$source,$deployFolder,$dest,$compNameCommandFrag,$usernameCommandFrag,$passwordCommandFrag,$authTypeCommandFrag
+    if($isWebsite) {			
+		$msdCommand = "{0} -setParamFile:""{1}""" -f $msdCommand, $setParametersFilePath
+	}	
     # add the skip for the _Deploy_ folder
     $msdCommand = "{0} {1}" -f $msdCommand, "-skip:objectName=dirPath,absolutePath=""_Deploy_"""    
     # add the skip for web.*.config
@@ -693,7 +714,9 @@ function BuildMSDeployCommand {
     # add the skip for the _Package folder
     $msdCommand += " -skip:objectName=dirPath,absolutePath=_Package"
     $msdCommand += " -skip:objectName=filePath,absolutePath=.*\.wpp\.targets$"
-    
+    # add the whatif frag
+	$msdCommand = "{0} {1}" -f $msdCommand, $whatIfCommandFrag
+	
     if($allowUntrusted) {
         $msdCommand += " -allowUntrusted"
     }
@@ -903,18 +926,17 @@ function GetParameterValuesFromFile {
     }
 }
 
+### END MODULE SECTION ####
 
 # ***************************************
 # End functions, begin the script
 # ***************************************
 
-### END MODULE SECTION ####
-
 # CLS
 $thisFile = Get-Item $MyInvocation.MyCommand.Definition
 
-try {
 
+try {
 # get the parameters prepared
 $allUserOptions = (GetParameterValuesFromFile -currentDir $thisFile.DirectoryName -settingsContainer $scriptParams); 
 $userResult = $allUserOptions.settingsFromUser;
@@ -946,8 +968,7 @@ foreach($arg in $otherArgs) {
         else{
             $scriptParams += @{name=$matches[1];defaultValue=$matches[2];value=$matches[2]}
         }
-
-        
+			        
         # $scriptParams += @{name=$matches[1];defaultValue=$matches[2];value=$matches[2]}
     }
     else {
@@ -1007,10 +1028,17 @@ if(!(Test-Path $deployFolder)){
    return
 }
 
+# check to see if this is a website. If not copy the App.config file from the transforms folder to the content root.
+$isWebsite = (Test-Path (Join-Path -Path $tempPublishFolder -ChildPath '\Content\website\*.*'))
+
+if(!($isWebsite)) {
+	Copy-Item (Join-Path -Path $tempPublishFolder -ChildPath "Content\website\_Deploy_\transforms\transformFiles\App.config") -Destination (Join-Path -Path $tempPublishFolder -ChildPath "Content\website")
+}
+
 # execute the transforms now
 $executedTransforms = ExecuteTransforms -deployFolder $deployFolder
 if(!($executedTransforms)){ $executedTransforms = '' }
-$executedTransformsStr = [string]::Join(';',$executedTransforms)
+$executedTransformsStr = [string]::Join(';',$executedTransforms)	
 
 # gather parameters from the user
 $paramResult = GetParametersFromPackage -packagePath $zipFile.FullName -tempPublishFolder $tempPublishFolder
@@ -1024,7 +1052,15 @@ $paramResultFromUser += @{name=("{0}" -f $paramNameZipFile);Value=("{0}" -f $zip
 $setParametersFilePath = Join-Path -Path $tempPublishFolder -ChildPath "SetParameters.xml"
 CreateSetParametersFile -setParametersFilePath $setParametersFilePath -paramValues $paramResultFromUser
 
-# now publish the package and replace the source web.config with this new one
+# if this is a non-web project we need to copy the app.config to the bin folder which becomes are content source
+
+if(!($isWebsite)) {
+	$configPath = Join-Path -Path $tempPublishFolder -ChildPath "Content\website\App.config"
+	$binPath = Join-Path -Path $tempPublishFolder -ChildPath "Content\website\bin"
+	Copy-Item -Path $configPath -Destination $binPath
+}
+
+# now publish the package
 $msdCommand = BuildMSDeployCommand -deployFolder $tempPublishFolder -setParametersFilePath $setParametersFilePath -paramValues $paramResultFromUser
 
 PublishWithMSDeploy -msdCommand $msdCommand
@@ -1039,7 +1075,4 @@ catch {
     $excep = $_.Exception
     $errorString = "An error has occurred around line [{0}], message = [{1}]" -f $excep.Line, $excep.ToString()
     Write-Error $errorString
-    # Write-Error $_.Exception.ToString()
 }
-
-#Set-Location $previousWd

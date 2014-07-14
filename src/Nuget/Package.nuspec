@@ -1,19 +1,19 @@
 <?xml version="1.0"?>
 <package >
   <metadata>
-    <id>PackageWeb</id>
-    <version>1.1.16.3</version>
-    <authors>Sayed Ibrahim Hashimi</authors>
-    <owners>Sayed Ibrahim Hashimi</owners>
+    <id>PackageNet</id>
+    <version>1.0.0.0</version>
+    <authors>Dave Baumann</authors>
+    <owners>Dave Baumann</owners>
     <licenseUrl>http://www.apache.org/licenses/LICENSE-2.0</licenseUrl>
-    <projectUrl>https://github.com/sayedihashimi/package-web/</projectUrl>
+    <projectUrl>https://github.com/wpDave/package-net/</projectUrl>
     <!--<iconUrl>http://ICON_URL_HERE_OR_DELETE_THIS_LINE</iconUrl>-->
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
     <description>
-    This will extend web packages so that you can publish a package to different environments. Your packages will contain all of your web.config transforms.
+      PackageNet takes PackageWeb a step further to extend web packages for ANY .net project so that you can publish a package to different environments. Your packages will contain all of your *.config transforms.
     </description>
-    <copyright>Copyright 2011-2013 Sayed Ibrahim Hashimi</copyright>
-    <tags>PackageWeb Package Web Package-Web Deploy ASP.NET MSDeploy</tags>
+    <copyright>Copyright 2014 Route 2 Solutions, Inc.</copyright>
+    <tags>PackageNet Package Net Package-Net Deploy .NET MSDeploy</tags>
     <!--<dependencies>
       <dependency id="SampleDependency" version="1.0" />
     </dependencies>-->
