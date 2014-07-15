@@ -92,7 +92,98 @@ function DoesProjectHaveImport {
     return $hasImport
 }
 
+function AddDependentPropertyGroup {
+	param($projRoot)
+	
+	$propGroup = GetPublishDependencyPropertyGroup -projRoot $projRoot
+	if($propGroup -eq $null) {
+		# add the property group 
+		$propGroup = $projRoot.AddPropertyGroup()
+	}
+
+	# add the dependencies if they do not exist.
+	AddVisualStudioVersion -propGroup $propGroup
+	AddToolsPath -propGroup $propGroup	
+	
+	$projRoot.Save() | Out-Null
+}
+
+function GetPublishDependencyPropertyGroup{
+	param($projRoot)
+	
+	$propGroup = $null
+	foreach($pge in $projRoot.PropertyGroups) {
+		if($pge -ne $null) {
+			foreach($ppe in $pge.Properties) {
+				if($ppe -ne $null -and ($ppe.Name -eq $visualStudioVersionPropertyName -or $ppe.Name -eq $vsToolsPathPropertyName)) {
+					$propGroup = $pge
+					break
+				}
+			}
+		}
+	}
+	
+	return $propGroup;	
+}
+
+function AddVisualStudioVersion {
+	param($propGroup)
+	
+	$hasProperty = $false
+	
+	foreach($ppe in $propGroup.Properties) {
+		if((PropertyExists -projProp $ppe -name $visualStudioVersionPropertyName)) {
+			$hasProperty = $true
+			break;
+		}		
+	}	
+	
+	if(!($hasProperty)) {
+		$ppe = $propGroup.AddProperty($visualStudioVersionPropertyName, "10.0")
+		$e = $ppe.Condition = (" '`$({0})'=='' " -f $ppe.Name)		
+	}
+}
+
+function AddToolsPath {
+	param($propGroup)
+	
+	$toolsPath = '$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)'
+	
+	$hasProperty = $false
+	
+	foreach($ppe in $propGroup.Properties) {
+		if((PropertyExists -projProp $ppe -name $vsToolsPathPropertyName)) {
+			$hasProperty = $true
+			break;
+		}		
+	}	
+	
+	if(!($hasProperty)) {
+		$ppe = $propGroup.AddProperty($vsToolsPathPropertyName, $toolsPath)
+		$e = $ppe.Condition = (" '`$({0})'=='' " -f $ppe.Name)		
+	}
+}
+
+function PropertyExists {
+	param($projProp, [string]$name)
+	
+	$hasProperty = $false;
+	if($projProp -ne $null -and $projProp.Name.Trim() -eq $name) {
+		$hasProperty = $true 
+	}
+	
+	return $hasProperty
+}
+
 # WriteParamsToFile -filePath "C:\temp\sayedha-ps.txt"
+
+$visualStudioVersionPropertyName = "VisualStudioVersion"
+$vsToolsPathPropertyName = "VSToolsPath"
+
+$projectMSBuild = [Microsoft.Build.Construction.ProjectRootElement]::Open($project.FullName)
+
+# If this isn't a web project we need to add the necessary elements to support the publish.
+AddDependentPropertyGroup -projRoot $projectMSBuild
 
 CreateWppTargetsFile -project $project
 
