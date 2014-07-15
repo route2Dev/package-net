@@ -103,9 +103,20 @@ function AddDependentPropertyGroup {
 
 	# add the dependencies if they do not exist.
 	AddVisualStudioVersion -propGroup $propGroup
-	AddToolsPath -propGroup $propGroup	
+	AddToolsPath -propGroup $propGroup		
+}
+
+function AddWebDeployImport {
+	param($projRoot)
 	
-	$projRoot.Save() | Out-Null
+	$importPath = '$(VSToolsPath)\WebApplications\Microsoft.WebApplication.targets'
+	
+	$hasImport = DoesProjectHaveWebDeployImports -projRoot $projRoot -importPath $importPath
+	
+	if(!($hasImport)) {
+		$importElement = $projRoot.AddImport($importPath)
+		$importElement.Condition = (" '`$({0})'=='' " -f "VSToolsPath")
+	}	
 }
 
 function GetPublishDependencyPropertyGroup{
@@ -175,6 +186,21 @@ function PropertyExists {
 	return $hasProperty
 }
 
+function DoesProjectHaveWebDeployImports {
+    param($projRoot, [string]$importPath)
+        
+    $hasImport = $false
+    foreach($pie in $projRoot.Imports) {
+        # see if it has the Project
+        if($pie -ne $null -and $pie.Project.Trim() -ceq $importPath) {
+            $hasImport = $true
+            break
+        }               
+    }
+    
+    return $hasImport
+}
+
 # WriteParamsToFile -filePath "C:\temp\sayedha-ps.txt"
 
 $visualStudioVersionPropertyName = "VisualStudioVersion"
@@ -184,6 +210,7 @@ $projectMSBuild = [Microsoft.Build.Construction.ProjectRootElement]::Open($proje
 
 # If this isn't a web project we need to add the necessary elements to support the publish.
 AddDependentPropertyGroup -projRoot $projectMSBuild
+AddWebDeployImport - -projRoot $projectMSBuild
 
 CreateWppTargetsFile -project $project
 
